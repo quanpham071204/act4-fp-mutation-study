@@ -1,0 +1,74 @@
+diff --git a/riscv/act_mutant.h b/riscv/act_mutant.h
+new file mode 100644
+index 0000000..220a7ad
+--- /dev/null
++++ b/riscv/act_mutant.h
+@@ -0,0 +1,19 @@
++// ACT4 D S4 mutants. Select with SPIKE_MUTANT=M1|M2|M3|M4 (unset = normal Spike).
++#ifndef ACT_MUTANT_H
++#define ACT_MUTANT_H
++#include <cstdlib>
++#include <cstring>
++static inline bool act_mutant(const char* id)
++{
++  static const char* m = std::getenv("SPIKE_MUTANT");
++  return m && std::strcmp(m, id) == 0;
++}
++// M1: decoder only accepts rm=000 on exact conversions (as if MASK included bits 14:12)
++#define MUT_M1_STRICT_DECODE() \
++  do { if (act_mutant("M1") && insn.rm() != 0) throw trap_illegal_instruction(insn.bits()); } while (0)
++// M2: rm field is never checked (reserved static rm 101/110 executes)
++// M4: dynamic rm ignores a reserved frm (frm=5..7 executes)
++#define MUT_RM() \
++  (act_mutant("M2") ? 0 : \
++   act_mutant("M4") && insn.rm() == 7 ? (STATE.frm->read() & 3) : RM)
++#endif
+diff --git a/riscv/insn_template.h b/riscv/insn_template.h
+index c5898fb..a9c3cd5 100644
+--- a/riscv/insn_template.h
++++ b/riscv/insn_template.h
+@@ -11,3 +11,4 @@
+ #include "v_ext_macros.h"
+ #include "debug_defines.h"
+ #include <cassert>
++#include "act_mutant.h"
+diff --git a/riscv/insns/fcvt_d_s.h b/riscv/insns/fcvt_d_s.h
+index 8039e94..f4c66db 100644
+--- a/riscv/insns/fcvt_d_s.h
++++ b/riscv/insns/fcvt_d_s.h
+@@ -1,5 +1,6 @@
+ require_either_extension('D', EXT_ZDINX);
+ require_fp;
+-softfloat_roundingMode = RM;
++MUT_M1_STRICT_DECODE();
++softfloat_roundingMode = MUT_RM();
+ WRITE_FRD_D(f32_to_f64(FRS1_F));
+ set_fp_exceptions;
+diff --git a/riscv/insns/fcvt_d_w.h b/riscv/insns/fcvt_d_w.h
+index e3375fa..0f399e7 100644
+--- a/riscv/insns/fcvt_d_w.h
++++ b/riscv/insns/fcvt_d_w.h
+@@ -1,5 +1,9 @@
+ require_either_extension('D', EXT_ZDINX);
+ require_fp;
+-softfloat_roundingMode = RM;
+-WRITE_FRD_D(i32_to_f64((int32_t)RS1));
++MUT_M1_STRICT_DECODE();
++softfloat_roundingMode = MUT_RM();
++if (act_mutant("M3") && insn.rm() != 0)
++  WRITE_FRD_D(f32_to_f64(i32_to_f32((int32_t)RS1)));
++else
++  WRITE_FRD_D(i32_to_f64((int32_t)RS1));
+ set_fp_exceptions;
+diff --git a/riscv/insns/fcvt_d_wu.h b/riscv/insns/fcvt_d_wu.h
+index d903561..a7dfc6a 100644
+--- a/riscv/insns/fcvt_d_wu.h
++++ b/riscv/insns/fcvt_d_wu.h
+@@ -1,5 +1,6 @@
+ require_either_extension('D', EXT_ZDINX);
+ require_fp;
+-softfloat_roundingMode = RM;
++MUT_M1_STRICT_DECODE();
++softfloat_roundingMode = MUT_RM();
+ WRITE_FRD_D(ui32_to_f64((uint32_t)RS1));
+ set_fp_exceptions;

@@ -1,0 +1,19 @@
+--- spike-src/riscv/insns/fcvt_s_bf16.h	2026-10-24 08:18:46.261312553 +0000
++++ spike-mut/riscv/insns/fcvt_s_bf16.h	2026-10-24 08:28:58.966623838 +0000
+@@ -1,5 +1,6 @@
+ require_extension(EXT_ZFBFMIN);
+ require_fp;
+ softfloat_roundingMode = RM;
+-WRITE_FRD_F(bf16_to_f32(FRS1_BF));
++// MUTANT M1: only checks NaN-box bits [31:16], ignores [63:32]
++WRITE_FRD_F(bf16_to_f32(bf16((uint16_t)(((READ_FREG(insn.rs1()).v[0] >> 16) & 0xffff) == 0xffff ? (uint16_t)READ_FREG(insn.rs1()).v[0] : defaultNaNBF16UI))));
+ set_fp_exceptions;
+--- spike-src/riscv/insns/fmv_h_x.h	2026-10-24 08:18:46.261617122 +0000
++++ spike-mut/riscv/insns/fmv_h_x.h	2026-10-24 08:34:38.241673710 +0000
+@@ -1,3 +1,5 @@
+ require_extension(EXT_INTERNAL_ZFH_MOVE);
+ require_fp;
+-WRITE_FRD(f16(RS1));
++// MUTANT M2: NaN-boxes only to 32 bits, leaves bits [63:32] zero
++freg_t mut_v; mut_v.v[0] = 0xffff0000ULL | (uint16_t)RS1; mut_v.v[1] = (uint64_t)-1;
++WRITE_FRD(mut_v);
