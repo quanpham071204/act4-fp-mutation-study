@@ -16,5 +16,5 @@
 - [ ] Optional: run D S4 tests on CVW via Verilator (`make cvw-rv64gc EXTENSIONS=D`)
 
 ## Publish
-- [ ] Pick a license, edit Authorship section
+- [x] Pick a license (MIT), edit Authorship section
 - [ ] Regenerate docs/report.pdf after updating numbers

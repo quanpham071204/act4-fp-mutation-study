@@ -1,7 +1,7 @@
 ---
 title: "How much do the RISC-V ACT4 floating-point tests really check?"
 subtitle: "A mutation-testing study of NaN-boxing and rounding-mode coverage"
-author: "Wan (Quan Pham)"
+author: "Wan (github.com/quanpham071204)"
 date: "October 2026 (draft)"
 ---
 

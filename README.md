@@ -72,11 +72,17 @@ individual PRs for it, so the work is published here instead.
 
 ## Authorship
 
-Written by Wan (Quan Pham). AI tools were used for research and drafting; all
-results are reproduced and checked by the author. *(Edit this section to
-describe your own process.)*
+Project by Wan ([@quanpham071204](https://github.com/quanpham071204)).
+An AI assistant (Claude) was used for research, for drafting the patches,
+mutants, scripts and report, and for the first measurements in a cloud
+environment. The author chose the direction, reviews every change, and is
+reproducing all results on their own machine; results not yet reproduced are
+marked in `results/`.
 
 ## License
 
-*(Choose one before publishing, e.g. MIT for this repository's own files. The
-patches modify ACT4 and Spike and follow those projects' licenses.)*
+This repository's own files are released under the [MIT License](LICENSE).
+The patches in `patches/` modify
+[riscv-arch-test](https://github.com/riscv/riscv-arch-test) and
+[Spike](https://github.com/riscv-software-src/riscv-isa-sim) and remain under
+those projects' licenses.
