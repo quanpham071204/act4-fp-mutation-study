@@ -1,0 +1,68 @@
+From e3a72caab666f24ab5aeb162615190efdbea3229 Mon Sep 17 00:00:00 2001
+From: Pham Anh Quan <quanpham071204@gmail.com>
+Date: Sun, 25 Oct 2026 23:23:47 +0700
+Subject: [PATCH] Fix the linker script path of the Sv39 privileged smoke tests
+
+Signed-off-by: Pham Anh Quan <quanpham071204@gmail.com>
+---
+ .../smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh      | 2 +-
+ .../smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi.sh      | 2 +-
+ .../smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi.sh    | 2 +-
+ .../smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi.sh    | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh
+index 3af217d57..accfa25e7 100644
+--- a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh
++++ b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh
+@@ -104,7 +104,7 @@ for test in "${SV39_PRIV_TESTS[@]}"; do
+     --test "$test" --iss_yaml cva6.yaml \
+     --target cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi \
+     --iss=$DV_SIMULATORS $DV_OPTS \
+-    --linker=../tests/custom/privtests/priv/config/link.ld
++    --linker=../tests/custom/env/privtests/priv/config/link.ld
+ done
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-compliance-cv64a6_imafdc_sv39.yaml --test rv32i-I-ADD-01 --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi --iss=$DV_SIMULATORS $DV_OPTS
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-tests-cv64a6_imafdc_sv39-p.yaml --test rv64ua-p-amoadd_d --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi --iss=$DV_SIMULATORS $DV_OPTS
+diff --git a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi.sh b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi.sh
+index b6955a5ef..794692057 100644
+--- a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi.sh
++++ b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi.sh
+@@ -104,7 +104,7 @@ for test in "${SV39_PRIV_TESTS[@]}"; do
+     --test "$test" --iss_yaml cva6.yaml \
+     --target cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi \
+     --iss=$DV_SIMULATORS $DV_OPTS \
+-    --linker=../tests/custom/privtests/priv/config/link.ld
++    --linker=../tests/custom/env/privtests/priv/config/link.ld
+ done
+ # Standalone tests below already PASS spike-uvm comparison - commented out for failing-only rerun
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-compliance-cv64a6_imafdc_sv39.yaml --test rv32i-I-ADD-01 --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_mmu_obi --iss=$DV_SIMULATORS $DV_OPTS
+diff --git a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi.sh b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi.sh
+index 9ef8337e4..48e83cbaf 100644
+--- a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi.sh
++++ b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi.sh
+@@ -73,7 +73,7 @@ for test in "${SV39_PRIV_TESTS[@]}"; do
+     --test "$test" --iss_yaml cva6.yaml \
+     --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi \
+     --iss=$DV_SIMULATORS $DV_OPTS \
+-    --linker=../tests/custom/privtests/priv/config/link.ld
++    --linker=../tests/custom/env/privtests/priv/config/link.ld
+ done
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-compliance-cv64a6_imafdc_sv39.yaml --test rv32i-I-ADD-01 --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi --iss=$DV_SIMULATORS $DV_OPTS
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-tests-cv64a6_imafdc_sv39-p.yaml --test rv64ua-p-amoadd_d --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_axi --iss=$DV_SIMULATORS $DV_OPTS
+diff --git a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi.sh b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi.sh
+index 8e4b757f7..f4c2f81ad 100644
+--- a/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi.sh
++++ b/verif/regress/smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi.sh
+@@ -73,7 +73,7 @@ for test in "${SV39_PRIV_TESTS[@]}"; do
+     --test "$test" --iss_yaml cva6.yaml \
+     --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi \
+     --iss=$DV_SIMULATORS $DV_OPTS \
+-    --linker=../tests/custom/privtests/priv/config/link.ld
++    --linker=../tests/custom/env/privtests/priv/config/link.ld
+ done
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-compliance-cv64a6_imafdc_sv39.yaml --test rv32i-I-ADD-01 --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi --iss=$DV_SIMULATORS $DV_OPTS
+ python3 cva6.py --iss_timeout=30000 --testlist=../tests/testlist_riscv-tests-cv64a6_imafdc_sv39-p.yaml --test rv64ui-p-add --iss_yaml cva6.yaml --target cv64a6_imafdc_sv39_hpdcache_pmp_nommu_obi --iss=$DV_SIMULATORS $DV_OPTS
+-- 
+2.43.0
+
