@@ -1,0 +1,69 @@
+# Extract from cva6_smoke.log (25/10/2026 18:02-18:27, smoke-tests-cv64a6_imafdc_sv39_hpdcache_pmp_mmu_axi.sh, BEFORE the fix)
+# count of 'cannot open linker script': 32
+5927: 18:25:26 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_canonical_Smode.S
+5928: 18:25:38 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+5941: 18:25:38 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_canonical_Umode.S
+5942: 18:25:38 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+5955: 18:25:39 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_global_pte_Smode.S
+5956: 18:25:39 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+5969: 18:25:39 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_global_pte_Umode.S
+5970: 18:25:39 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+5983: 18:25:39 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_invalid_pte_Smode.S
+5984: 18:25:40 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+5997: 18:25:40 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_invalid_pte_Umode.S
+5998: 18:25:40 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6011: 18:25:40 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_misaligned_page_Smode.S
+6012: 18:25:41 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6025: 18:25:41 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_misaligned_page_Umode.S
+6026: 18:25:41 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6039: 18:25:41 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_mstatus_mprv_Smode.S
+6040: 18:25:41 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6053: 18:25:41 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_mstatus_mprv_Umode.S
+6054: 18:25:42 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6067: 18:25:42 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_mstatus_mxr_Smode.S
+6068: 18:25:42 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6081: 18:25:42 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_mstatus_mxr_Umode.S
+6082: 18:25:45 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6095: 18:25:46 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_nleaf_pte_DAU_Smode.S
+6096: 18:25:46 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6109: 18:25:46 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_nleaf_pte_DAU_Umode.S
+6110: 18:25:46 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6123: 18:25:46 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_nleaf_pte_level0_Smode.S
+6124: 18:25:46 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6137: 18:25:47 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_nleaf_pte_level0_Umode.S
+6138: 18:25:47 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6151: 18:25:47 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_pte_reserved_field_Smode.S
+6152: 18:25:47 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6165: 18:25:47 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_pte_reserved_rwx_Smode.S
+6166: 18:25:48 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6179: 18:25:48 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_pte_reserved_rwx_Umode.S
+6180: 18:25:48 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6193: 18:25:48 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_pte_rsw_Smode.S
+6194: 18:25:48 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6207: 18:25:48 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_pte_rsw_Umode.S
+6208: 18:25:49 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6221: 18:25:49 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_satp_access_test.S
+6222: 18:25:49 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6235: 18:25:49 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_spage_access_Umode.S
+6236: 18:25:49 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6249: 18:25:49 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_spage_mstatus_sum_set_Smode.S
+6250: 18:25:50 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6263: 18:25:50 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_svnapot_not_supported_Smode.S
+6264: 18:25:50 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6277: 18:25:50 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_svpbmt_disabled_Smode.S
+6278: 18:25:50 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6291: 18:25:50 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_upage_mprv_set_sum_set_Smode.S
+6292: 18:25:51 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6305: 18:25:51 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_upage_mprv_set_sum_unset_Smode.S
+6306: 18:25:51 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6319: 18:25:51 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_upage_mstatus_sum_set_Smode.S
+6320: 18:25:51 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6333: 18:25:52 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_upage_mstatus_sum_unset_Smode.S
+6334: 18:25:52 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6347: 18:25:52 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_VA_all_ones_Smode.S
+6348: 18:25:52 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+6361: 18:25:52 INFO     Compiling test: /home/quanpham071204/work/cva6/verif/tests/custom/env/privtests/priv/Sv/sv39_VA_all_zeros_Smode.S
+6362: 18:25:52 INFO     /home/quanpham071204/tools/riscv/riscv64-unknown-elf/bin/ld: cannot open linker script file ../tests/custom/privtests/priv/config/link.ld: No such file or directory
+
+# tail summary
+6639:Sun, 25 Oct 2026 18:27:53 INFO     6 PASSED, 0 FAILED
