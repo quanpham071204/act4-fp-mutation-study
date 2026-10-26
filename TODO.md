@@ -13,6 +13,10 @@
 - [ ] Study 3: write `tools/check_norm_refs.py` (reuse `coverpoints_of()` from
       `generators/ctp/generate_priv_testplans.py`); must print exactly the 3 rows in results/norm_refs.md
 - [ ] Study 1 extension: BF16 sNaN bad-box operand (e.g. low half 0x7F81) + a mutant that skips the box check
+- [ ] Study 5 (CVA6 privileged): re-check the 7 core issues from cva6#3585 (mstatus.SD/VS,
+      WPRI writable, mret MPRV, stvec bits 5:1, ebreak mtval, non-leaf PTE A/D/U) with
+      ACT4 Sm/S/U/Sv on `cv64a6_study4`; review B/Zbk* in its UDB first
+- [ ] CVA6: comment on cva6#3585 with the Study 4 result (author writes it)
 - [ ] Optional: run D S4 tests on CVW via Verilator (`make cvw-rv64gc EXTENSIONS=D`)
 
 ## Publish
