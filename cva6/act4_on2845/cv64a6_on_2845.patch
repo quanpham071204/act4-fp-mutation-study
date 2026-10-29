@@ -1,0 +1,1560 @@
+diff --git a/.github/scripts/install-cva6.sh b/.github/scripts/install-cva6.sh
+index c217ac331..28e34374f 100755
+--- a/.github/scripts/install-cva6.sh
++++ b/.github/scripts/install-cva6.sh
+@@ -14,7 +14,7 @@ mkdir -p "$INSTALL_DIR/bin"
+ INSTALL_DIR="$(cd "$INSTALL_DIR" && pwd)"
+ CVA6_REPO="https://github.com/openhwfoundation/cva6.git"
+ CVA6_COMMIT="81245a47fad8fe1a5d562d953ef2662e099def76"
+-TARGETS="cv32a65x cv32a60x"
++TARGETS="cv32a65x cv32a60x cv64a6_imafdc_sv39_hpdcache"
+ 
+ export NUM_JOBS="${NUM_JOBS:-$(nproc)}"
+ export VERILATOR_INSTALL_DIR="$INSTALL_DIR/verilator"
+diff --git a/config/cores/cva6/README.md b/config/cores/cva6/README.md
+index f635477b1..0646e0bce 100644
+--- a/config/cores/cva6/README.md
++++ b/config/cores/cva6/README.md
+@@ -3,16 +3,21 @@
+ These configurations run the [CVA6](https://github.com/openhwfoundation/cva6) core in its Verilator
+ testharness (`corev_apu/tb/ariane_testharness.sv`), pinned to CVA6 commit `81245a4`.
+ 
+-| Config     | ISA                                             | Modes |
+-| ---------- | ----------------------------------------------- | ----- |
+-| `cv32a65x` | RV32IMC_Zicsr_Zifencei_Zcb_Zba_Zbb_Zbc_Zbkc_Zbs | M     |
+-| `cv32a60x` | RV32IMC_Zicsr_Zifencei_Zcb_Zba_Zbb_Zbc_Zbkc_Zbs | M     |
++| Config               | ISA                                                                                                    | Modes   |
++| -------------------- | ------------------------------------------------------------------------------------------------------ | ------- |
++| `cv32a65x`           | RV32IMC_Zicsr_Zifencei_Zcb_Zba_Zbb_Zbc_Zbkc_Zbs                                                        | M       |
++| `cv32a60x`           | RV32IMC_Zicsr_Zifencei_Zcb_Zba_Zbb_Zbc_Zbkc_Zbs                                                        | M       |
++| `cv64a6_imafdc_sv39` | RV64IMAFDC_Zicsr_Zifencei_Zicntr_Zihpm_Zicbom_Zicond_Zcb_Zba_Zbb_Zbc_Zbs_Zbkb_Zbkc_Zbkx_Zkne_Zknd_Zknh | M, S, U |
+ 
+ `cv32a65x` is the 6-stage, M-mode-only release configuration described in the
+ [CV32A65X Design Document](https://docs.openhwfoundation.org/projects/cva6-user-manual/04_cv32a65x/design/design.html).
+ Its RTL parameters are in `core/include/cv32a65x_config_pkg.sv`. `cv32a60x` is the same ISA with
+ no PMP entries (`NrPMPEntries=0`); its parameters are in
+-`core/include/cv32a60x_config_pkg.sv`. Both share `ci.yaml` and `install-cva6.sh`.
++`core/include/cv32a60x_config_pkg.sv`. `cv64a6_imafdc_sv39` is the 64-bit application-class
++configuration with S and U modes, Sv39, 8 PMP entries and the HPDcache; it runs the
++`cv64a6_imafdc_sv39_hpdcache` target, whose parameters are in
++`core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv`. All three share `ci.yaml` and
++`install-cva6.sh`.
+ 
+ ## Building and running
+ 
+@@ -22,6 +27,7 @@ export PATH=$HOME/repos/cva6-builds/bin:$PATH
+ export CVA6_SNAPSHOT=$HOME/repos/cva6-builds
+ make cv32a65x EXCLUDE_EXTENSIONS=InterruptsSm
+ make cv32a60x EXCLUDE_EXTENSIONS=InterruptsSm
++make cv64a6_imafdc_sv39 EXCLUDE_EXTENSIONS="$(.github/scripts/ci_config.py --exclusions config/cores/cva6/ci.yaml)"
+ ```
+ 
+ The install script clones CVA6, builds the Verilator and Spike versions CVA6's own CI uses (the
+diff --git a/config/cores/cva6/ci.yaml b/config/cores/cva6/ci.yaml
+index 68ed44999..8e856eda6 100644
+--- a/config/cores/cva6/ci.yaml
++++ b/config/cores/cva6/ci.yaml
+@@ -11,16 +11,42 @@ ci_enabled: true
+ #   has an interrupt source.
+ #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/corev_apu/tb/ariane_testharness.sv#L586-L590
+ #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/corev_apu/tb/ariane_peripherals.sv#L287
+-# PMPSm: PMPSm_cfg_A_tor_zero stores to and loads from address 0. In the testharness
++#   On cv64a6_imafdc_sv39, InterruptsSm_priority_mideleg_{M,S,U} would also fail: writes to
++#   mie/mip/mideleg do not flush the pipeline, so a newly enabled interrupt is taken late.
++#   https://github.com/openhwfoundation/cva6/issues/3175
++# PMP_Sm_cfg_A_tor_zero stores to and loads from address 0. In the testharness
+ #   address 0 is the debug module (DebugBase=0x0, DebugLength=0x1000), not RAM, and Sail
+ #   expects an access fault there. CVA6 does not implement PMA and its AXI adapters
+ #   ignore error responses, so the DUT raises no fault and the load returns 0.
+-#   The other 28 ExceptionsSm/PMPSm tests pass. Remove this exclusion if the test can
+-#   be excluded individually, or once the DUT faults on accesses to unmapped addresses.
+ #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/corev_apu/tb/ariane_soc_pkg.sv#L58
+ #   https://github.com/openhwfoundation/cva6/issues/2370
+ #   https://github.com/openhwfoundation/cva6/issues/3656
+-exclude_extensions: "InterruptsSm,PMPSm"
++# The remaining entries fail on cv64a6_imafdc_sv39 because of open CVA6 RTL issues.
++exclude_extensions:
++  - InterruptsSm
++  - PMP_Sm_cfg_A_tor_zero
++  # An FCVT F->int that updates fflags does not set mstatus.FS to Dirty.
++  #   https://github.com/openhwfoundation/cva6/issues/3173 (fix: openhwfoundation/cva6#3678)
++  - S_F
++  - Sm_F
++  - U_F
++  # LR takes store/AMO exception causes (6, 7, 15) instead of load causes (4, 5, 13),
++  # including PMP and page faults.
++  #   https://github.com/openhwfoundation/cva6/issues/2455
++  #   https://github.com/openhwfoundation/cva6/issues/3394
++  - Exceptions_Zalrsc
++  - PMP_Zalrsc_cfg_wr
++  - Sv_ExceptionsZalrsc_sv39_exceptions_Zalrsc
++  - Sv_ExceptionsZalrscSm_sv39_exceptions_Zalrsc_mprv_S_Mmode
++  - Sv_ExceptionsZalrscSm_sv39_medeleg_Zalrsc
++  # cbo.clean/cbo.flush raise a store page fault on a page with R=1, W=0.
++  #   https://github.com/openhwfoundation/cva6/issues/3431
++  - Sv_Zicbo_sv39_zicbom_exceptions
++  # pmpaddr bit 0 reads as 1 in NAPOT mode, so a NAPOT region cannot be smaller than
++  # 16 bytes while TOR has 8-byte granularity.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L995-L1001
++  #   https://github.com/openhwfoundation/cva6/issues/697
++  - PMP_Sm_grain-
+ 
+ # device-tree-compiler and the Boost libraries are required by CVA6's Spike build
+ # (verif/regress/install-spike.sh). Without them fesvr is not installed and the
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/cv64a6_imafdc_sv39.yaml b/config/cores/cva6/cv64a6_imafdc_sv39/cv64a6_imafdc_sv39.yaml
+new file mode 100644
+index 000000000..3a0c11fb3
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/cv64a6_imafdc_sv39.yaml
+@@ -0,0 +1,522 @@
++# yaml-language-server: $schema=../../../../external/riscv-unified-db/spec/schemas/config_schema.json
++# SPDX-License-Identifier: Apache-2.0
++# Quan Pham <quanpham071204@gmail.com> October 2026
++# UDB Architecture Configuration for CVA6 cv64a6_imafdc_sv39, run on the CVA6 Verilator testharness
++# (target cv64a6_imafdc_sv39_hpdcache).
++# Started from the CVA6 + Ara configuration attached to openhwfoundation/cva6#3585 and
++# re-checked against the stand-alone target.
++#
++# Links below point at openhwfoundation/cva6@81245a47, the commit pinned in
++# .github/scripts/install-cva6.sh. Parameters of the target come from
++#   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv
++
++---
++$schema: config_schema.json#
++kind: architecture configuration
++type: fully configured
++name: cv64a6_imafdc_sv39
++description: OpenHW Group CVA6 cv64a6_imafdc_sv39 configuration (Verilator testharness)
++
++implemented_extensions:
++  # misa is read-only (MXL=2): A, B, C, D, F, I, M, S, U. X is 0 because no non-standard
++  # FP format (XF16, XF16ALT, XF8, XFVec) is enabled on this target.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L647
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L366-L379
++  - { name: I, version: "= 2.1" }
++  - { name: M, version: "= 2.0" }
++  - { name: Zmmul, version: "= 1.0.0" }
++  # CVA6ConfigAExtEn = 1 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L33)
++  - { name: A, version: "= 2.1.0" }
++  - { name: Zaamo, version: "= 1.0.0" }
++  - { name: Zalrsc, version: "= 1.0.0" }
++  # CVA6ConfigRVF = 1 and RVD follows it; CVA6ConfigF16En = 0, so no Zfh/Zfhmin
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L22-L27
++  - { name: F, version: "= 2.2.0" }
++  - { name: D, version: "= 2.2.0" }
++  # CVA6ConfigCExtEn = 1 and CVA6ConfigZcbExtEn = 1 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L30-L31)
++  - { name: C, version: "= 2.0" }
++  - { name: Zca, version: "= 1.0.0" }
++  - { name: Zcb, version: "= 1.0.0" }
++  - { name: Zcd, version: "= 1.0.0" }
++  # RVZiCbom = 1; menvcfg.CBIE/CBCFE are implemented (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1787-L1800)
++  - { name: Zicbom, version: "= 1.0.0" }
++  # CVA6ConfigRVZiCond = 1 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L37)
++  - { name: Zicond, version: "= 1.0.0" }
++  - { name: Zicsr, version: "= 2.0" }
++  - { name: Zifencei, version: "= 2.0.0" }
++  # CVA6ConfigBExtEn = 1 (Zba, Zbb, Zbs, Zbc) and ZKN = 1. ZKN decodes pack/packh/brev8,
++  # xperm4/xperm8, the AES and the SHA-256/512 instructions.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L34
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L107
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/decoder.sv#L882-L1046
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/decoder.sv#L1191-L1218
++  - { name: B, version: "= 1.0.0" }
++  - { name: Zba, version: "= 1.0.0" }
++  - { name: Zbb, version: "= 1.0.0" }
++  - { name: Zbs, version: "= 1.0.0" }
++  - { name: Zbc, version: "= 1.0.0" }
++  - { name: Zbkb, version: "= 1.0.0" }
++  - { name: Zbkc, version: "= 1.0.0" }
++  - { name: Zbkx, version: "= 1.0.0" }
++  - { name: Zkne, version: "= 1.0.0" }
++  - { name: Zknd, version: "= 1.0.0" }
++  - { name: Zknh, version: "= 1.0.0" }
++  # Instruction fetches and page-table walks both read the coherent cache hierarchy.
++  - { name: Ziccif, version: "= 1.0.0" }
++  - { name: Ssccptr, version: "= 1.0.0" }
++  # cycle and instret are implemented (RVZicntr = 1). The time CSR is not decoded and
++  # traps as an illegal instruction, see TIME_CSR_IMPLEMENTED below.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L706-L708
++  # Zihpm: six counters, mhpmcounter3..8 (MHPMCounterNum = 6); 9..31 read as zero.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/ariane_pkg.sv#L646
++  - { name: Zicntr, version: "= 2.0.0" }
++  - { name: Zihpm, version: "= 2.0.0" }
++  # RVS = RVU = 1 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L124-L125)
++  - { name: U, version: "= 1.0.0" }
++  - { name: S, version: "= 1.12.0" }
++  # Sm 1.12: menvcfg and mconfigptr are decoded (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L673, https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L694)
++  - { name: Sm, version: "= 1.12.0" }
++  # satp accepts only Bare and Sv39.
++  - { name: Sv39, version: "= 1.0.0" }
++  - { name: Svbare, version: "= 1.0.0" }
++  # Svade: the page table walker raises a page fault when A (or D on a store) is clear and
++  # never updates them.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/cva6_mmu/cva6_ptw.sv#L490-L510
++  - { name: Svade, version: "= 1.0.0" }
++  # TvalEn = 1, stvec accepts direct and vectored mode.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L73
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1427
++  - { name: Sstvala, version: "= 1.0.0" }
++  - { name: Sstvecd, version: "= 1.0.0" }
++  # scounteren is written unmasked from csr_wdata[31:0] (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1429-L1431)
++  - { name: Sscounterenw, version: "= 1.0.0" }
++  # sstatus.UXL is readable but not in SMODE_STATUS_WRITE_MASK, so UXLEN is fixed at 64.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/ariane_pkg.sv#L125-L134
++  - { name: Ssu64xl, version: "= 1.0.0" }
++  # Not implemented on this target: H, V, Zcmp, Zcmt, Zfa, Zfh, Zicbop, Zicboz, Svinval,
++  # Svnapot, Svpbmt, Sv48, Sv57, Sstc, Smepmp.
++
++params:
++  # misa.X = 0, see above.
++  NON_STANDARD_EXTENSION_IMPLEMENTED: false
++
++  # ---------------------------------------------------------------- A params
++  # A misaligned AMO or LR/SC raises an address-misaligned exception.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/load_store_unit.sv#L746-L806
++  MISALIGNED_AMO: false
++  LRSC_RESERVATION_STRATEGY: "reserve exactly enough to cover the access"
++  LRSC_FAIL_ON_VA_SYNONYM: false
++  LRSC_MISALIGNED_BEHAVIOR: "always raise misaligned exception"
++  LRSC_FAIL_ON_NON_EXACT_LRSC: false
++  # misa writes are ignored (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1666)
++  MUTABLE_MISA_A: false
++  MUTABLE_MISA_B: false
++  MUTABLE_MISA_M: false
++  MUTABLE_MISA_F: false
++  MUTABLE_MISA_D: false
++  MUTABLE_MISA_C: false
++  MUTABLE_MISA_U: false
++  MUTABLE_MISA_S: false
++
++  # ---------------------------------------------------------------- F/D params
++  # mstatus.FS is set to Dirty when an FP instruction commits (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L2054).
++  # FCVT F->int and FP compares do not set it today: CVA6 #3173.
++  HW_MSTATUS_FS_DIRTY_UPDATE: precise
++  MSTATUS_FS_LEGAL_VALUES: [0, 1, 2, 3]
++  MSTATUS_VS_LEGAL_VALUES: [0]
++  # From the csr_regfile.sv medeleg/mideleg write masks (RVS = 1, RVH = 0)
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1669-L1699
++  MEDELEG_DELEGATABLE:
++    [
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      false,
++      false,
++      false,
++      true,
++      true,
++      false,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
++  MIDELEG_DELEGATABLE:
++    [
++      false,
++      true,
++      false,
++      false,
++      false,
++      true,
++      false,
++      false,
++      false,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
++
++  # ---------------------------------------------------------------- U params
++  # BigEndianEn = 0, so MBE/SBE/UBE are read-only zero (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1647-L1649)
++  U_MODE_ENDIANNESS: little
++  # WFI in U-mode raises an illegal-instruction exception (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/decoder.sv#L290-L293)
++  WFI_U_MODE: false
++  UXLEN: [64]
++  TRAP_ON_ECALL_FROM_U: true
++
++  # ---------------------------------------------------------------- S params
++  # ASID_WIDTH = 16 for XLEN = 64 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/build_config_pkg.sv#L41)
++  ASID_WIDTH: 16
++  S_MODE_ENDIANNESS: little
++  # SSIP, STIP and SEIP are writable in mip, mie and mideleg (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1695-L1699)
++  SEI_INTR_IMPL: true
++  SSI_INTR_IMPL: true
++  STI_INTR_IMPL: true
++  SXLEN: [64]
++  # TvalEn = 1: every trap with a faulting address or instruction reports it in [ms]tval.
++  REPORT_VA_IN_MTVAL_ON_LOAD_PAGE_FAULT: true
++  REPORT_VA_IN_MTVAL_ON_STORE_AMO_PAGE_FAULT: true
++  REPORT_VA_IN_MTVAL_ON_INSTRUCTION_PAGE_FAULT: true
++  REPORT_VA_IN_STVAL_ON_BREAKPOINT: true
++  REPORT_VA_IN_STVAL_ON_LOAD_MISALIGNED: true
++  REPORT_VA_IN_STVAL_ON_STORE_AMO_MISALIGNED: true
++  REPORT_VA_IN_STVAL_ON_INSTRUCTION_MISALIGNED: true
++  REPORT_VA_IN_STVAL_ON_LOAD_ACCESS_FAULT: true
++  REPORT_VA_IN_STVAL_ON_STORE_AMO_ACCESS_FAULT: true
++  REPORT_VA_IN_STVAL_ON_INSTRUCTION_ACCESS_FAULT: true
++  REPORT_VA_IN_STVAL_ON_LOAD_PAGE_FAULT: true
++  REPORT_VA_IN_STVAL_ON_STORE_AMO_PAGE_FAULT: true
++  REPORT_VA_IN_STVAL_ON_INSTRUCTION_PAGE_FAULT: true
++  REPORT_ENCODING_IN_STVAL_ON_ILLEGAL_INSTRUCTION: true
++  STVAL_WIDTH: 64
++  # scounteren: the hardware write is unmasked, but UDB only allows a bit to be enabled
++  # when its counter exists: CY, IR and HPM3..8 (no time CSR).
++  SCOUNTENABLE_EN:
++    [
++      true,
++      false,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
++  # A vectored interrupt replaces base bits 7:2 with the cause instead of adding 4*cause,
++  # so the vectored base must be 256-byte aligned (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L2713)
++  STVEC_MODES: [0, 1]
++  STVEC_BASE_ALIGNMENT_VECTORED: 256
++  SATP_MODE_BARE: true
++  TRAP_ON_ECALL_FROM_S: true
++
++  # ---------------------------------------------------------------- Sm params
++  # MSIP/MTIP/MEIP follow the ipi_i, time_irq_i and irq_i[0] pins (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L2095-L2099).
++  # ACT reads these as the machine interrupts the platform can raise
++  # (tests/env/check_defines.h). The testharness CLINT provides the timer only.
++  MEI_INTR_IMPL: false
++  MSI_INTR_IMPL: false
++  MTI_INTR_IMPL: true
++  # The time CSR is not decoded, so rdtime traps.
++  TIME_CSR_IMPLEMENTED: false
++  CACHE_BLOCK_SIZE: 16
++  FORCE_UPGRADE_CBO_INVAL_TO_FLUSH: false
++  # WFI waits until an enabled interrupt is pending or debug is requested, with no timeout.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L2679-L2684
++  WFI_FINITE: false
++  MXLEN: 64
++  PRECISE_SYNCHRONOUS_EXCEPTIONS: true
++  TRAP_ON_ECALL_FROM_M: true
++  TRAP_ON_EBREAK: true
++  # mvendorid 0x602 (OpenHW Group: bank 0xC, offset 0x2), marchid 3, mimpid 0.
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/ariane_pkg.sv#L55-L57
++  MARCHID_IMPLEMENTED: true
++  ARCH_ID_VALUE: 3
++  MIMPID_IMPLEMENTED: false
++  VENDOR_ID_BANK: 0xC
++  VENDOR_ID_OFFSET: 0x2
++  # mconfigptr reads zero (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L694)
++  CONFIG_PTR_ADDRESS: 0
++  # Misaligned scalar loads/stores are not supported in hardware. Declared false so the
++  # Misalign suites are not selected.
++  MISALIGNED_LDST: false
++  MISALIGNED_LDST_EXCEPTION_PRIORITY: low
++  TRAP_ON_ILLEGAL_WLRL: false
++  TRAP_ON_UNIMPLEMENTED_INSTRUCTION: true
++  TRAP_ON_RESERVED_INSTRUCTION: true
++  TRAP_ON_UNIMPLEMENTED_CSR: true
++  REPORT_VA_IN_MTVAL_ON_BREAKPOINT: true
++  REPORT_VA_IN_MTVAL_ON_LOAD_MISALIGNED: true
++  REPORT_VA_IN_MTVAL_ON_STORE_AMO_MISALIGNED: true
++  REPORT_VA_IN_MTVAL_ON_INSTRUCTION_MISALIGNED: true
++  REPORT_VA_IN_MTVAL_ON_LOAD_ACCESS_FAULT: true
++  REPORT_VA_IN_MTVAL_ON_STORE_AMO_ACCESS_FAULT: true
++  REPORT_VA_IN_MTVAL_ON_INSTRUCTION_ACCESS_FAULT: true
++  REPORT_ENCODING_IN_MTVAL_ON_ILLEGAL_INSTRUCTION: true
++  MTVAL_WIDTH: 64
++  PMA_GRANULARITY: 12
++  # PLEN = 56 for XLEN = 64 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/build_config_pkg.sv#L36)
++  PHYS_ADDR_WIDTH: 56
++  M_MODE_ENDIANNESS: little
++  MISA_CSR_IMPLEMENTED: true
++  MTVEC_ACCESS: rw
++  # DirectVecOnly = 0, so direct and vectored modes are supported. In vectored mode bits
++  # 7:1 are cleared, i.e. a 256-byte base alignment (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1741-L1748)
++  MTVEC_MODES: [0, 1]
++  MTVEC_BASE_ALIGNMENT_DIRECT: 4
++  MTVEC_BASE_ALIGNMENT_VECTORED: 256
++  # Mode bit 1 is cleared on write, so mode 2 or 3 lands as mode 0 or 1.
++  MTVEC_ILLEGAL_WRITE_BEHAVIOR: custom
++  # CVA6ConfigNrPMPEntries = 8, PMPNapotEn = 1, granularity 8 bytes (G=1).
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/include/cv64a6_imafdc_sv39_hpdcache_config_pkg.sv#L75
++  #   https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L995-L1001
++  NUM_PMP_ENTRIES: 16
++  NUM_USABLE_PMP_ENTRIES: 8
++  PMP_GRANULARITY: 3
++  PMP_NA4_SUPPORTED: false
++  PMP_NAPOT_SUPPORTED: true
++  PMP_TOR_SUPPORTED: true
++  # Six 64-bit counters, mhpmcounter3..8 (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/perf_counters.sv#L66)
++  HPM_COUNTER_EN:
++    [
++      false,
++      false,
++      false,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
++  HPM_COUNTER3_WIDTH: 64
++  HPM_COUNTER4_WIDTH: 64
++  HPM_COUNTER5_WIDTH: 64
++  HPM_COUNTER6_WIDTH: 64
++  HPM_COUNTER7_WIDTH: 64
++  HPM_COUNTER8_WIDTH: 64
++  HPM_EVENTS: [0]
++  MCOUNTINHIBIT_IMPLEMENTED: true
++  # mcountinhibit: CY and HPM3..8 are writable, TM is zero (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1806)
++  COUNTINHIBIT_EN:
++    [
++      true,
++      false,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
++  # mcounteren: as for scounteren (https://github.com/openhwfoundation/cva6/blob/81245a47fad8fe1a5d562d953ef2662e099def76/core/csr_regfile.sv#L1749-L1752)
++  MCOUNTENABLE_EN:
++    [
++      true,
++      false,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      true,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++      false,
++    ]
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/link.ld b/config/cores/cva6/cv64a6_imafdc_sv39/link.ld
+new file mode 100644
+index 000000000..519aaa20f
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/link.ld
+@@ -0,0 +1,59 @@
++/* CVA6 testharness DRAM starts at 0x80000000.
++ * The testbench provides 256 MiB of physical memory; 16 MiB is
++ * sufficient for ACT tests. Keep in sync with memory.regions in sail.json.
++ * See:
++ * https://github.com/openhwfoundation/cva6/blob/81245a47/corev_apu/tb/ariane_soc_pkg.sv#L67
++ * https://github.com/openhwfoundation/cva6/blob/81245a47/corev_apu/tb/ariane_testharness.sv#L34
++ */
++
++RAM_ORIGIN = 0x80000000;
++RAM_LENGTH = 0x1000000;
++TEST_BASE = RAM_ORIGIN;
++NUM_HARTS = 1;
++
++/* Most users should not need to modify anything below this line. */
++STACK_SIZE = 0x20000;
++
++OUTPUT_ARCH( "riscv" )
++ENTRY(rvtest_entry_point)
++
++MEMORY
++{
++  ram (rwx) : ORIGIN = RAM_ORIGIN, LENGTH = RAM_LENGTH
++}
++
++PROVIDE(__stack_size = STACK_SIZE);
++PROVIDE(__num_harts = NUM_HARTS);
++
++SECTIONS
++{
++  ASSERT(TEST_BASE >= ORIGIN(ram) && TEST_BASE < ORIGIN(ram) + LENGTH(ram), "TEST_BASE is outside RAM; update TEST_BASE and RAM_ORIGIN/RAM_LENGTH in link.ld, and the matching memory.regions entry in sail.json")
++
++  .text.init   TEST_BASE : { *(.text.init) } > ram
++  .text.rvtest . : { *(.text.rvtest) *(.text.rvtest.*) } > ram
++
++  . = ALIGN(0x4000);
++  .rodata . : { *(.rodata) *(.rodata.*) *(.srodata) *(.srodata.*) } > ram
++  .data   . : { *(.data) *(.data.*) *(.sdata) *(.sdata.*) } > ram
++
++  . = ALIGN(16);
++  .bss . : {
++    __bss_start = .;
++    *(.sbss) *(.sbss.*) *(.bss) *(.bss.*) *(COMMON)
++    . = ALIGN(16);
++    __bss_end = .;
++  } > ram
++
++  . = ALIGN(16);
++  __stack_bottom = .;
++  . += __stack_size * __num_harts;
++  __stack_top = .;
++
++  . = ALIGN(0x1000);
++  .text.rvmodel . : { *(.text.rvmodel) *(.text.rvmodel.*) *(.text) *(.text.*) } > ram
++
++  . = ALIGN(0x1000);
++  _end = .;
++
++  ASSERT(_end <= ORIGIN(ram) + LENGTH(ram), "ACT ELF exceeds RAM; increase RAM_LENGTH in link.ld and the matching memory.regions size in sail.json")
++}
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/run_cmd.txt b/config/cores/cva6/cv64a6_imafdc_sv39/run_cmd.txt
+new file mode 100644
+index 000000000..646353608
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/run_cmd.txt
+@@ -0,0 +1 @@
++run-cva6.sh --target cv64a6_imafdc_sv39_hpdcache {debug:--trace __TRACEFILE__} --elf
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/rvmodel_macros.h b/config/cores/cva6/cv64a6_imafdc_sv39/rvmodel_macros.h
+new file mode 100644
+index 000000000..0de5ed5a6
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/rvmodel_macros.h
+@@ -0,0 +1,55 @@
++# rvmodel_macros.h
++# SPDX-License-Identifier: Apache-2.0
++# RVMODEL macro definitions for OpenHW CVA6 (cv64a6_imafdc_sv39) on the Verilator testharness.
++# Uses HTIF tohost for test completion and the UART at 0x10000000 for output.
++
++#ifndef _RVMODEL_MACROS_H
++#define _RVMODEL_MACROS_H
++
++#define RVMODEL_DATA_SECTION \
++        .pushsection .tohost,"aw",@progbits;                \
++        .balign 8; .global tohost; tohost: .dword 0;         \
++        .balign 8; .global fromhost; fromhost: .dword 0;     \
++        .popsection;
++
++#define STANDARD_SM_SUPPORTED
++
++//#define RVMODEL_BOOT
++
++# fesvr: tohost = 1 -> exit code 0 (SUCCESS), tohost = 3 -> exit code 1 (FAILED)
++#define RVMODEL_HALT_PASS  \
++  li x1, 1                ;\
++  la t0, tohost           ;\
++  write_tohost_pass:      ;\
++    sw x1, 0(t0)          ;\
++    sw x0, 4(t0)          ;\
++  self_loop_pass:         ;\
++    j self_loop_pass      ;\
++
++#define RVMODEL_HALT_FAIL \
++  li x1, 3                ;\
++  la t0, tohost           ;\
++  write_tohost_fail:      ;\
++    sw x1, 0(t0)          ;\
++    sw x0, 4(t0)          ;\
++  self_loop_fail:         ;\
++    j self_loop_fail      ;\
++
++#define RVMODEL_IO_WRITE_STR(_R1, _R2, _R3, _STR_PTR) \
++1:                           ;                        \
++  lbu  _R1, 0(_STR_PTR)      ; /* Load byte */        \
++  beqz _R1, 3f               ; /* Exit if null */     \
++2:                           ;                        \
++  li   _R2, 0x10000000       ; /* ariane UART THR */  \
++  sb   _R1, 0(_R2)           ;                        \
++  addi _STR_PTR, _STR_PTR, 1 ; /* Next char */        \
++  j 1b                       ; /* Loop */             \
++3:
++
++#define RVMODEL_INTERRUPT_LATENCY 10
++
++#define RVMODEL_MTIME_ADDRESS    0x0200BFF8
++#define RVMODEL_MTIMECMP_ADDRESS 0x02004000
++#define RVMODEL_TIMER_INT_SOON_DELAY 100
++
++#endif // _RVMODEL_MACROS_H
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/sail.json b/config/cores/cva6/cv64a6_imafdc_sv39/sail.json
+new file mode 100644
+index 000000000..e8cb45042
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/sail.json
+@@ -0,0 +1,777 @@
++{
++  "$schema": "https://github.com/riscv/sail-riscv/releases/download/0.16/sail_riscv_config_schema.json",
++  "base": {
++    "xlen": 64,
++    "E": false,
++    "hpmcounter_increments_in_self_hpmevent_write": false,
++    "hpmcounter_width_bits": 64,
++    "hpmevent_width_bits": 5,
++    "mcountinhibit": {
++      "supported": true,
++      "writable_bits": {
++        "len": 32,
++        "value": "0x0000_01FD"
++      }
++    },
++    "writable_fiom": true,
++    "writable_hpm_counters": {
++      "len": 32,
++      "value": "0x0000_01F8"
++    },
++    "scounteren_writable_bits": {
++      "len": 32,
++      "value": "0xFFFF_FFFF"
++    },
++    "mcounteren_writable_bits": {
++      "len": 32,
++      "value": "0xFFFF_FFFF"
++    },
++    "hcounteren_writable_bits": {
++      "len": 32,
++      "value": "0x0"
++    },
++    "mtvec": {
++      "direct": {
++        "supported": true,
++        "base_alignment": 2
++      },
++      "vectored": {
++        "supported": true,
++        "base_alignment": 8
++      }
++    },
++    "stvec": {
++      "direct": {
++        "supported": true
++      },
++      "vectored": {
++        "supported": true,
++        "base_alignment": 8
++      }
++    },
++    "vstvec": {
++      "direct": {
++        "supported": false
++      },
++      "vectored": {
++        "supported": false,
++        "base_alignment": 2
++      }
++    },
++    "medeleg": {
++      "delegatable_bits": {
++        "len": 64,
++        "value": "0x0000_0000_0000_B1FF"
++      }
++    },
++    "mideleg": {
++      "delegatable_bits": {
++        "len": "xlen",
++        "value": "0x0000_0000_0000_0222"
++      }
++    },
++    "xtval_nonzero": {
++      "illegal_instruction": true,
++      "virtual_instruction": false,
++      "load_guest_page_fault": false,
++      "samo_guest_page_fault": false,
++      "fetch_guest_page_fault": false,
++      "software_breakpoint": true,
++      "hardware_breakpoint": true,
++      "load_address_misaligned": true,
++      "load_access_fault": true,
++      "load_page_fault": true,
++      "samo_address_misaligned": true,
++      "samo_access_fault": true,
++      "samo_page_fault": true,
++      "fetch_address_misaligned": true,
++      "fetch_access_fault": true,
++      "fetch_page_fault": true,
++      "software_check": true,
++      "hardware_error": true,
++      "reserved_exceptions": false
++    },
++    "reserved_behavior": {
++      "amocas_odd_register": "AMOCAS_Illegal",
++      "fcsr_rm": "Fcsr_RM_Illegal",
++      "pmpcfg_write_only": "PMP_ClearPermissions",
++      "xenvcfg_cbie": "Xenvcfg_ClearPermissions",
++      "xtvec_mode": "Xtvec_Ignore",
++      "rv32zdinx_odd_register": "Zdinx_Illegal"
++    },
++    "mstatus": {
++      "fs_legal_states": "ExtContext_FourState",
++      "vs_legal_states": "ExtContext_Off"
++    },
++    "privileged_isa_version": "Privileged_ISA_1_12"
++  },
++  "memory": {
++    "physaddr_bits": 56,
++    "asidlen": 16,
++    "vmidlen": 14,
++    "pmp": {
++      "grain": 1,
++      "count": 16,
++      "usable_count": 8,
++      "tor_supported": true,
++      "na4_supported": false,
++      "napot_supported": true
++    },
++    "misaligned": {
++      "exceptions": {
++        "load_store": {
++          "Some": "AlignmentException"
++        },
++        "vector": {
++          "Some": "AlignmentException"
++        },
++        "amo": {
++          "Some": "AlignmentException"
++        },
++        "lrsc": {
++          "Some": "AlignmentException"
++        }
++      },
++      "order_decreasing": false,
++      "default_allowed_within_exp": 0,
++      "byte_by_byte": false
++    },
++    "dtb_address": {
++      "len": 64,
++      "value": "0x80F00000"
++    },
++    "regions": [
++      {
++        "base": {
++          "len": 64,
++          "value": "0x2000000"
++        },
++        "size": {
++          "len": 64,
++          "value": "0x10000000"
++        },
++        "attributes": {
++          "mem_type": "IOMemory",
++          "cacheable": false,
++          "coherent": true,
++          "executable": false,
++          "readable": true,
++          "writable": true,
++          "read_idempotent": false,
++          "write_idempotent": false,
++          "misaligned_exceptions": {
++            "load_store": {
++              "Some": "AlignmentException"
++            },
++            "vector": {
++              "Some": "AlignmentException"
++            },
++            "amo": "AlignmentException",
++            "lrsc": "AccessFault"
++          },
++          "atomic_support": "AMONone",
++          "misaligned_atomicity_granule_size_exp": 0,
++          "vector_misaligned_atomicity_granule_size_exp": 0,
++          "reservability": "RsrvNone",
++          "supports_cbo_zero": false,
++          "supports_pte_read": false,
++          "supports_pte_write": false
++        },
++        "include_in_device_tree": false
++      },
++      {
++        "base": {
++          "len": 64,
++          "value": "0x80000000"
++        },
++        "size": {
++          "len": 64,
++          "value": "0x1000000"
++        },
++        "attributes": {
++          "mem_type": "MainMemory",
++          "cacheable": true,
++          "coherent": true,
++          "executable": true,
++          "readable": true,
++          "writable": true,
++          "read_idempotent": true,
++          "write_idempotent": true,
++          "misaligned_exceptions": {
++            "load_store": {
++              "None": null
++            },
++            "vector": {
++              "Some": "AlignmentException"
++            },
++            "amo": "AlignmentException",
++            "lrsc": "AlignmentException"
++          },
++          "atomic_support": "AMOArithmetic",
++          "misaligned_atomicity_granule_size_exp": 0,
++          "vector_misaligned_atomicity_granule_size_exp": 0,
++          "reservability": "RsrvEventual",
++          "supports_cbo_zero": false,
++          "supports_pte_read": true,
++          "supports_pte_write": true
++        },
++        "include_in_device_tree": true
++      }
++    ],
++    "invalid_physical_address": {
++      "None": null
++    }
++  },
++  "platform": {
++    "vendorid": 1538,
++    "archid": 3,
++    "impid": 0,
++    "hartid": 0,
++    "cache_block_size_exp": 4,
++    "reservation": {
++      "reservation_set_size_exp": 3,
++      "require_exact_reservation_addr": false,
++      "invalidate_on_same_hart_store": false
++    },
++    "interrupts": {
++      "machine": {
++        "software": {
++          "supported": true
++        },
++        "external": {
++          "supported": true
++        },
++        "timer": {
++          "supported": true
++        }
++      }
++    },
++    "clint": {
++      "supported": true,
++      "base": 33554432,
++      "size": 786432
++    },
++    "simple_interrupt_generator": {
++      "supported": true,
++      "base": 201326592
++    },
++    "clock_frequency": 1000000000,
++    "instructions_per_tick": 2,
++    "wfi_is_nop": false,
++    "wfi_available_to_user_mode": false,
++    "max_time_to_wait": 200,
++    "event_selectors": []
++  },
++  "extensions": {
++    "M": {
++      "mutable_misa": false,
++      "supported": true
++    },
++    "A": {
++      "mutable_misa": false,
++      "supported": true
++    },
++    "F": {
++      "mutable_misa": false,
++      "supported": true,
++      "fflags_dirty_policy": "Fflags_Dirty_Precise"
++    },
++    "D": {
++      "mutable_misa": false,
++      "supported": true
++    },
++    "C": {
++      "mutable_misa": false
++    },
++    "V": {
++      "mutable_misa": false,
++      "support_level": "Disabled",
++      "vlen_exp": 9,
++      "elen_exp": 6,
++      "reserved_behavior": {
++        "illegal_vtype": "IllegalVtype_SetVill",
++        "vstart_out_of_bounds": "Vstart_Illegal"
++      },
++      "vl_use_ceil": false,
++      "max_index_eew_exp": 6,
++      "vstart": {
++        "zero_required": {
++          "arith": true,
++          "scalar_move": true
++        }
++      }
++    },
++    "B": {
++      "mutable_misa": false,
++      "supported": true
++    },
++    "S": {
++      "mutable_misa": false,
++      "supported": true,
++      "interrupts": {
++        "software": {
++          "supported": true
++        },
++        "external": {
++          "supported": true
++        },
++        "timer": {
++          "supported": true
++        }
++      }
++    },
++    "U": {
++      "mutable_misa": false,
++      "supported": true
++    },
++    "H": {
++      "mutable_misa": false,
++      "supported": false,
++      "geilen": 63,
++      "guest_page_fault_writes_htval": true,
++      "transformed_instruction": {
++        "load_access_fault": true,
++        "load_address_misaligned": true,
++        "load_guest_page_fault": true,
++        "load_page_fault": true,
++        "samo_access_fault": true,
++        "samo_address_misaligned": true,
++        "samo_guest_page_fault": true,
++        "samo_page_fault": true
++      },
++      "hgatp_modes": {
++        "Sv32x4": false,
++        "Sv39x4": true,
++        "Sv48x4": true,
++        "Sv57x4": true
++      },
++      "vsatp_modes": {
++        "Sv32": false,
++        "Sv39": true,
++        "Sv48": true,
++        "Sv57": true
++      },
++      "implicit_vs_pte_access_sets_gstage_d": false
++    },
++    "Sha": {
++      "supported": false
++    },
++    "Shcounterenw": {
++      "supported": false
++    },
++    "Shgatpa": {
++      "supported": false
++    },
++    "Shtvala": {
++      "supported": false
++    },
++    "Shvsatpa": {
++      "supported": false
++    },
++    "Shvstvala": {
++      "supported": false
++    },
++    "Shvstvecd": {
++      "supported": false
++    },
++    "Sstvecd": {
++      "supported": true
++    },
++    "Svukte": {
++      "supported": false
++    },
++    "Zilx": {
++      "supported": false
++    },
++    "Zibi": {
++      "supported": false
++    },
++    "Zic64b": {
++      "supported": false
++    },
++    "Zicbom": {
++      "supported": true
++    },
++    "Zicbop": {
++      "supported": false
++    },
++    "Zicboz": {
++      "supported": false
++    },
++    "Ziccamoa": {
++      "supported": false
++    },
++    "Ziccamoc": {
++      "supported": false
++    },
++    "Ziccif": {
++      "supported": true
++    },
++    "Zicclsm": {
++      "supported": false
++    },
++    "Ziccrse": {
++      "supported": false
++    },
++    "Zicfilp": {
++      "supported": false
++    },
++    "Zicfiss": {
++      "supported": false
++    },
++    "Zicond": {
++      "supported": true
++    },
++    "Zicntr": {
++      "supported": true
++    },
++    "Zicsr": {
++      "supported": true
++    },
++    "Zifencei": {
++      "supported": true
++    },
++    "Zihintntl": {
++      "supported": false
++    },
++    "Zihintpause": {
++      "supported": false
++    },
++    "Zihpm": {
++      "supported": true
++    },
++    "Zimop": {
++      "supported": false
++    },
++    "Zmmul": {
++      "supported": true
++    },
++    "Zaamo": {
++      "supported": true
++    },
++    "Zabha": {
++      "supported": false
++    },
++    "Zacas": {
++      "supported": false
++    },
++    "Zalrsc": {
++      "supported": true
++    },
++    "Zama16b": {
++      "supported": false
++    },
++    "Zawrs": {
++      "supported": false,
++      "nto": {
++        "is_nop": false
++      },
++      "sto": {
++        "is_nop": false
++      }
++    },
++    "Zfa": {
++      "supported": false
++    },
++    "Zfbfmin": {
++      "supported": false
++    },
++    "Zfh": {
++      "supported": false
++    },
++    "Zfhmin": {
++      "supported": false
++    },
++    "Zfinx": {
++      "supported": false
++    },
++    "Zdinx": {
++      "supported": false
++    },
++    "Zca": {
++      "supported": true
++    },
++    "Zcf": {
++      "supported": false
++    },
++    "Zcd": {
++      "supported": true
++    },
++    "Zcb": {
++      "supported": true
++    },
++    "Zcmop": {
++      "supported": false
++    },
++    "Zba": {
++      "supported": true
++    },
++    "Zbb": {
++      "supported": true
++    },
++    "Zbs": {
++      "supported": true
++    },
++    "Zbc": {
++      "supported": true
++    },
++    "Zbkb": {
++      "supported": true
++    },
++    "Zbkc": {
++      "supported": true
++    },
++    "Zbkx": {
++      "supported": true
++    },
++    "Zknd": {
++      "supported": true
++    },
++    "Zkne": {
++      "supported": true
++    },
++    "Zknh": {
++      "supported": true
++    },
++    "Zkr": {
++      "supported": false,
++      "sseed_reset_value": false,
++      "useed_reset_value": false,
++      "sseed_read_only_zero": false,
++      "useed_read_only_zero": false
++    },
++    "Zksed": {
++      "supported": false
++    },
++    "Zksh": {
++      "supported": false
++    },
++    "Zkt": {
++      "supported": false
++    },
++    "Zhinx": {
++      "supported": false
++    },
++    "Zhinxmin": {
++      "supported": false
++    },
++    "Zvabd": {
++      "supported": false
++    },
++    "Zvfbfmin": {
++      "supported": false
++    },
++    "Zvfbfwma": {
++      "supported": false
++    },
++    "Zvfh": {
++      "supported": false
++    },
++    "Zvfhmin": {
++      "supported": false
++    },
++    "Zvbb": {
++      "supported": false
++    },
++    "Zvbc": {
++      "supported": false
++    },
++    "Zvkb": {
++      "supported": false
++    },
++    "Zvkg": {
++      "supported": false
++    },
++    "Zvkned": {
++      "supported": false
++    },
++    "Zvknha": {
++      "supported": false
++    },
++    "Zvknhb": {
++      "supported": false
++    },
++    "Zvksed": {
++      "supported": false
++    },
++    "Zvksh": {
++      "supported": false
++    },
++    "Zvkt": {
++      "supported": false
++    },
++    "Ssccptr": {
++      "supported": true
++    },
++    "Sscofpmf": {
++      "supported": false
++    },
++    "Sscounterenw": {
++      "supported": true
++    },
++    "Sstc": {
++      "supported": false
++    },
++    "Sstvala": {
++      "supported": true
++    },
++    "Svade": {
++      "supported": true
++    },
++    "Svadu": {
++      "supported": false
++    },
++    "Svinval": {
++      "supported": false
++    },
++    "Svrsw60t59b": {
++      "supported": false
++    },
++    "Svnapot": {
++      "supported": false
++    },
++    "Ssnpm": {
++      "supported": false,
++      "supported_pmlen_7": true,
++      "supported_pmlen_16": true
++    },
++    "Smnpm": {
++      "supported": false,
++      "supported_pmlen_7": true,
++      "supported_pmlen_16": true
++    },
++    "Smmpm": {
++      "supported": false,
++      "supported_pmlen_7": true,
++      "supported_pmlen_16": true
++    },
++    "Smcntrpmf": {
++      "supported": false
++    },
++    "Svbare": {
++      "supported": true,
++      "sfence_vma_illegal_if_svbare_only": true
++    },
++    "Sv32": {
++      "supported": false
++    },
++    "Sv39": {
++      "supported": true
++    },
++    "Sv48": {
++      "supported": false
++    },
++    "Sv57": {
++      "supported": false
++    },
++    "Stateen": {
++      "Smstateen": {
++        "supported": false
++      },
++      "Ssstateen": {
++        "supported": false
++      },
++      "C_readonly_zero": true,
++      "SE0_readonly_zero": false,
++      "mstateen0": {
++        "SE0": "CSRBit_Writable",
++        "ENVCFG": "CSRBit_ReadOnlyZero",
++        "CONTEXT": "CSRBit_ReadOnlyZero",
++        "P1P13": "CSRBit_ReadOnlyZero",
++        "SRMCFG": "CSRBit_ReadOnlyZero",
++        "FCSR": "CSRBit_ReadOnlyZero",
++        "C": "CSRBit_ReadOnlyZero"
++      },
++      "mstateen1": {
++        "SE1": "CSRBit_Writable"
++      },
++      "mstateen2": {
++        "SE2": "CSRBit_Writable"
++      },
++      "mstateen3": {
++        "SE3": "CSRBit_Writable"
++      },
++      "hstateen0": {
++        "ENVCFG": "CSRBit_ReadOnlyZero",
++        "CONTEXT": "CSRBit_ReadOnlyZero",
++        "FCSR": "CSRBit_ReadOnlyZero",
++        "C": "CSRBit_ReadOnlyZero"
++      },
++      "sstateen0": {
++        "FCSR": "CSRBit_ReadOnlyZero",
++        "C": "CSRBit_ReadOnlyZero"
++      }
++    },
++    "Ssqosid": {
++      "supported": false,
++      "rcid_length": 12,
++      "mcid_length": 12
++    },
++    "Svpbmt": {
++      "supported": false
++    },
++    "Svvptc": {
++      "supported": false
++    },
++    "Sdtrig": {
++      "supported": false,
++      "breakpoint_reentrancy": "No_reentrancy_support",
++      "etrigger": {
++        "supported": false,
++        "supported_exceptions": {
++          "len": "xlen",
++          "value": "0"
++        }
++      },
++      "hcontext": {
++        "supported": false
++      },
++      "icount": {
++        "supported": false,
++        "count_hardwired_one": false,
++        "self_write_sets_pending": false
++      },
++      "itrigger": {
++        "supported": false,
++        "supported_interrupts": {
++          "len": "xlen",
++          "value": "0"
++        }
++      },
++      "mcontext": {
++        "supported": false
++      },
++      "num_triggers": 0,
++      "scontext": {
++        "supported": false
++      },
++      "mcontrol6": {
++        "supported": false,
++        "maskmax6": 63,
++        "address_select_matches_all_addresses": true,
++        "max_chain_length": 4
++      },
++      "textra": {
++        "mhselect": {
++          "mcontext_match": false,
++          "vmid_match": false
++        },
++        "sselect": {
++          "scontext_match": false,
++          "asid_match": true
++        },
++        "mhvalue_len": 13,
++        "svalue_len": 32
++      }
++    },
++    "Smdbltrp": {
++      "supported": false
++    },
++    "Ssdbltrp": {
++      "supported": false
++    },
++    "Ssstrict": {
++      "supported": false
++    }
++  }
++}
+diff --git a/config/cores/cva6/cv64a6_imafdc_sv39/test_config.yaml b/config/cores/cva6/cv64a6_imafdc_sv39/test_config.yaml
+new file mode 100644
+index 000000000..0993dc039
+--- /dev/null
++++ b/config/cores/cva6/cv64a6_imafdc_sv39/test_config.yaml
+@@ -0,0 +1,7 @@
++name: cv64a6_imafdc_sv39
++compiler_exe: riscv64-unknown-elf-gcc # executable name on $PATH or full path to executable
++objdump_exe: riscv64-unknown-elf-objdump # executable name on $PATH or full path to executable, optional
++ref_model_exe: sail_riscv_sim # executable name on $PATH or full path to executable
++udb_config: cv64a6_imafdc_sv39.yaml
++linker_script: link.ld
++dut_include_dir: . # Directory containing DUT specific rvmodel_macros.h header
